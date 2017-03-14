@@ -7,14 +7,14 @@ const {
   isArray,
   isNone,
   isPresent,
-  getOwner,
   merge,
   Object: EmberObject,
   RSVP,
   Service,
   setProperties,
   Test,
-  testing
+  testing,
+  computed
 } = Ember;
 
 export default Service.extend({
@@ -24,21 +24,46 @@ export default Service.extend({
     this._super(...arguments);
 
     const apiURL = this.get('options.apiURL');
-    const owner = getOwner(this);
-    owner.registerOptionsForType('apollo', { instantiate: false });
+    const token = this.get('token');
+    const dataIdFromObject = this.get('dataIdFromObject');
 
-    let client = new ApolloClient({
-      networkInterface: createNetworkInterface({ uri: apiURL }),
-      // This dataIdFromObject only works with globally unique IDs. Might want
-      // to make it configurable.
-      dataIdFromObject: (o) => o.id
+    const networkInterface = createNetworkInterface({
+      uri: apiURL,
     });
+
+    if(token) {
+      networkInterface.use([{
+        applyMiddleware(req, next) {
+          if (!req.options.headers) {
+            req.options.headers = {};
+          }
+
+          req.options.headers.authorization = token ? `Bearer ${token}` : null;
+          next();
+        }
+      }]);
+    }
+
+    const client = new ApolloClient({
+      networkInterface,
+      dataIdFromObject
+    });
+
     this.set('client', client);
 
     if (testing) {
       this._registerWaiter();
     }
   },
+
+  /**
+   * Defauil implementation. Can be overiden in the subclass
+   */
+  dataIdFromObject: computed({
+    get() {
+      return (o) => o.id;
+    }
+  }),
 
   /**
    * Executes a mutation on the Apollo client. The resolved object will
