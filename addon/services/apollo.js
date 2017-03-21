@@ -24,19 +24,19 @@ export default Service.extend({
     this._super(...arguments);
 
     const apiURL = this.get('options.apiURL');
-    const token = this.get('token');
     const dataIdFromObject = this.get('dataIdFromObject');
 
     const networkInterface = createNetworkInterface({
       uri: apiURL,
     });
 
-    if(token) {
+    if(this.token) {
       networkInterface.use([{
-        applyMiddleware(req, next) {
-          if (!req.options.headers) {
+        applyMiddleware: (req, next) => {
+          if (!req.options.headers)
             req.options.headers = {};
-          }
+
+          const token = this.get('token');
 
           req.options.headers.authorization = token ? `Bearer ${token}` : null;
           next();
@@ -199,3 +199,4 @@ export default Service.extend({
     Test.registerWaiter(this._waiter);
   }
 });
+
